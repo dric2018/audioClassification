@@ -22,7 +22,7 @@ import argparse
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--train_csv_path', type=str, help='Train csv file')
-parser.add_argument('--lr', type=float, default=0.0013182567385564073,  help='Learning rate for model training')
+parser.add_argument('--lr', type=float, default=0.0023182567385564073,  help='Learning rate for model training')
 parser.add_argument('--gpus', type=int, default=1,  help='Number of gpus to use for training')
 parser.add_argument('--kfold', type=int, default=5,  help='number of folds to use for cross validation')
 parser.add_argument('--train_batch_size', type=int, default=16,  help='Training batch size')
@@ -121,7 +121,7 @@ if __name__=='__main__':
     print('*'*18)
     metrics = run_fold(fold=fold, train_df=train, args=args ,size=(224, 224), arch='resnet34', pretrained=True,   path=args.save_models_to, data_transforms=data_transforms)
     
-    val_acc, val_loss,_, train_acc, train_loss = metrics.values()
+    _, _, train_acc, train_loss, val_acc, val_loss = metrics.values()
     print('')
     print('*'*75)
     print(f'\t\t Results for Fold {fold}')

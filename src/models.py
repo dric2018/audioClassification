@@ -25,7 +25,7 @@ warnings.filterwarnings(action='ignore')
 
 
 class AudioClassifier(pl.LightningModule):
-    def __init__(self, pretrained=True, out_size=193,img_size=224, lr=0.0013182567385564073, arch_name='resnet18'):
+    def __init__(self, pretrained=True, out_size=193,img_size=224, lr=0.0023182567385564073, arch_name='resnet34'):
         super(AudioClassifier, self).__init__()
         self.save_hyperparameters()
 
@@ -164,7 +164,7 @@ if __name__ == '__main__':
     #loss = model.get_loss(logits, batch['label'].to('cuda'))
     #acc = model.get_acc(logits, batch['label'].to('cuda'))
 
-    trainer = pl.Trainer(gpus=1, max_epochs=10)
+    trainer = pl.Trainer(gpus=1, max_epochs=1)
     trainer.fit(model, dl)
     trainer.test(model, dl)
     #trainer.tune(model, train_dataloader=dl)
