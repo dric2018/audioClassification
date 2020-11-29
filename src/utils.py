@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 import librosa
 import matplotlib.pyplot as plt 
-
+import swifter
 from scipy import signal
 import warnings
 warnings.filterwarnings(action='ignore')
@@ -71,6 +71,9 @@ def calc_duration(file_path):
     return signal.shape[0] / sr
     
 
+def label_to_int(label, class_dict):
+    return class_dict[label]
+
 
 def create_train_dataframe(csv_path, data_path):
     if ('Train.csv' in os.listdir(csv_path))  or ('train.csv' in os.listdir(csv_path)):
@@ -104,12 +107,14 @@ def create_train_dataframe(csv_path, data_path):
 
 
         df['fn'] = data_path +'/'+ df['fn']
-        df['duration'] = df.apply(lambda row : calc_duration(row.fn), axis=1)
+        df['duration'] = df.swifter.progress_bar(enable=True, desc='computing audio durations').apply(lambda row : calc_duration(row.fn), axis=1) # use all available cpu cores
+        df['label'] = df.swifter.progress_bar(enable=True, desc='Converting labels to ints').apply(lambda row : label_to_int(label=row.label, class_dict={l:idx for idx, l in enumerate(df.label.unique().tolist())}) , axis=1)# use all available cpu cores
         df.to_csv(os.path.join(csv_path, 'final_train.csv'), index=False)
 
         try:
             samplde_df =  pd.read_csv(os.path.join(csv_path, 'SampleSubmission.csv'))
             sample_df['fn'] = data_path +'/'+ sample_df['fn']
+            sample_df.to_csv(os.path.join(csv_path, 'final_test.csv'), index=False)
         except:
             pass
     
@@ -140,7 +145,7 @@ def wav2img(wav_path, targetdir='', figsize=(4,4)):
     """
     fig = plt.figure(figsize=figsize)    
     # use soundfile library to read in the wave files
-    sound, samplerate  = librosa.load(filepath)
+    sound, samplerate  = librosa.load(wav_path)
     _, spectrogram = log_specgram(sound, samplerate)
     
     ## create output path
@@ -149,6 +154,8 @@ def wav2img(wav_path, targetdir='', figsize=(4,4)):
     #plt.imshow(spectrogram.T, aspect='auto', origin='lower')
     plt.imsave('%s.png' % output_file, spectrogram)
     plt.close()
+
+    return output_file
 
 
 
@@ -178,9 +185,14 @@ if __name__ == '__main__':
     if args.create_spectrograms:
         try:
             img_dir = args.specs_path+'/images'
+            df['spec_path'] = img_dir
             os.makedirs(img_dir, exist_ok=True)
-            for row in tqdm(df.iterrows(), total=len(df)):
-                print(row[1].fn)
-                wav2img(wav_path=row[1].fn, targetdir=img_dir)
+            for row in tqdm(df.iterrows(), total=len(df), desc='Creating specs'):
+                output_file = wav2img(wav_path=row[1].fn, targetdir=img_dir)
+                df['spec_path'] = output_file
+
+            # save dataframe with specs paths
+            df.to_csv(os.path.join(args.csv_path, 'final_train.csv'), index=False)
+            
         except:
             pass
