@@ -34,17 +34,18 @@ parser.add_argument('--save_resulting_file_to', type=str, help='Directory to sav
 parser.add_argument('--arch', type=str, help='Model architecture to load for inference')
 
 
-def load_models(models_path, arch=None, lr=0.013182567385564073):
+def load_models(models_path, arch=None):
 
     models = []
     for i in range(n_folds):
-    models.append( AudioClassifier(arch_name=arch, lr=args.lr) )
+    models.append( AudioClassifier(arch_name=arch) )
     models[i].to(device)
     try:
         models[i].load_from_checkpoint(os.path.join(models_path, f'ZINDI-GIZ-NLP-AGRI-KEYWORDS-{arch}-{i}-based.ckpt'))
     except:
         models[i].load_from_checkpoint(os.path.join(models_path, f'ZINDI-GIZ-NLP-AGRI-KEYWORDS-{arch}-{i}-based-v0.ckpt'))
     models[i].eval()
+
     return models
 
 
@@ -100,5 +101,15 @@ if __name__ == '__main__':
         ])
     }
 
-    df = pd.read_csv(args.train_csv_path)
-    train, n_folds = make_folds(n_folds=args.kfold, args=args, data=df)
+    test = pd.read_csv(args.test_csv_path)
+
+    # load models
+    models = load_models(models_path=args.models_path, arch=args.arch, lr=args.lr)
+    # make predictions
+    predictions_labels, predictions_proba = predict(test_df=test, 
+                                                    batch_size=args.test_batch_size, 
+                                                    n_folds=args.kfold, 
+                                                    transforms=data_transforms['test'], 
+                                                    n_tta=3, 
+                                                    device='cuda', 
+                                                    models=models)
