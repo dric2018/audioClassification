@@ -7,6 +7,12 @@ import argparse
 import pandas as pd 
 import numpy as np
 import librosa
+import matplotlib.pyplot as plt 
+
+from scipy import signal
+import warnings
+warnings.filterwarnings(action='ignore')
+
 
 
 parser = argparse.ArgumentParser()
@@ -16,6 +22,8 @@ parser.add_argument('--extract_files', default=False, type=bool, help='execute e
 parser.add_argument('--kind', default='7z', type=str, help='For .7z files extraction')
 parser.add_argument('--create_train_df', default=True, type=bool, help='Create a training dataframe or not')
 parser.add_argument('--csv_path', type=str, help='Csv files path')
+parser.add_argument('--specs_path', type=str, help='Spectrograms files path')
+parser.add_argument('--create_spectrograms', default=True, type=bool, help='Create log spectrogram or not')
 
 
 def extract_files(data_path:str, destination_path:str):
@@ -96,7 +104,7 @@ def create_train_dataframe(csv_path, data_path):
 
 
         df['fn'] = data_path +'/'+ df['fn']
-        df['duration'] = df.apply(lambda row : calc_duration(row.fn))
+        df['duration'] = df.apply(lambda row : calc_duration(row.fn), axis=1)
         df.to_csv(os.path.join(csv_path, 'final_train.csv'), index=False)
 
         try:
@@ -104,10 +112,46 @@ def create_train_dataframe(csv_path, data_path):
             sample_df['fn'] = data_path +'/'+ sample_df['fn']
         except:
             pass
+    
+        return df
 
 
 
-def 
+def log_specgram(audio, sample_rate, window_size=20, step_size=10, eps=1e-10):
+
+    """
+    Borrowing log spec function from https://www.kaggle.com/davids1992/data-visualization-and-investigation
+    """
+    nperseg = int(round(window_size * sample_rate / 1e3))
+    noverlap = int(round(step_size * sample_rate / 1e3))
+    freqs, _, spec = signal.spectrogram(audio,
+                                    fs=sample_rate,
+                                    window='hann',
+                                    nperseg=nperseg,
+                                    noverlap=noverlap,
+                                    detrend=False)
+    return freqs, np.log(spec.T.astype(np.float32) + eps)
+
+
+def wav2img(wav_path, targetdir='', figsize=(4,4)):
+    """
+    takes in wave file path
+    and the fig size. Default 4,4 will make images 288 x 288
+    """
+    fig = plt.figure(figsize=figsize)    
+    # use soundfile library to read in the wave files
+    sound, samplerate  = librosa.load(filepath)
+    _, spectrogram = log_specgram(sound, samplerate)
+    
+    ## create output path
+    output_file = wav_path.split('/')[-1].split('.wav')[0]
+    output_file = targetdir +'/'+ output_file
+    #plt.imshow(spectrogram.T, aspect='auto', origin='lower')
+    plt.imsave('%s.png' % output_file, spectrogram)
+    plt.close()
+
+
+
 
 if __name__ == '__main__':
 
@@ -127,9 +171,16 @@ if __name__ == '__main__':
 
     if args.create_train_df:
         try:
-            create_train_dataframe(args.csv_path, args.data_path)
+            df = create_train_dataframe(args.csv_path, args.data_path)
         except Exception as ex:
             print(ex)
 
-
-
+    if args.create_spectrograms:
+        try:
+            img_dir = args.specs_path+'/images'
+            os.makedirs(img_dir, exist_ok=True)
+            for row in tqdm(df.iterrows(), total=len(df)):
+                print(row[1].fn)
+                wav2img(wav_path=row[1].fn, targetdir=img_dir)
+        except:
+            pass
