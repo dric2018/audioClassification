@@ -50,32 +50,33 @@ def load_models(models_path, arch=None):
 
 
 
-def predict(test_df, batch_size=16, n_folds=3, transforms=None, n_tta=3, device='cuda', models=None):
-  test_ds = AudioDataset(df=df, task='test', transforms=transforms)
-  testloader = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
+def predict(test_df, images_path, batch_size=16, n_folds=3, transforms=None, n_tta=3, device='cuda', models=None):
+    # create test AudioDataset
+    test_ds = AudioDataset(images_path=images_path, df=test_df, transforms=transforms)
+    test_dl = Dataloader(dataset=test_ds, shuffle=False, batch_size=batch_size)
 
-  predictions_labels = []
-  predictions_proba = []
+    predictions_labels = []
+    predictions_proba = []
 
-  out = None
+    out = None
 
-  for data in tqdm(testloader):
-    x = data['image'].to(device)
+    for data in tqdm(testloader):
+        x = data['image'].to(device)
 
-    for i in range(n_folds):
-      if i == 0: out = models[i](x)
-      else: out += models[i](x)
+        for i in range(n_folds):
+        if i == 0: out = models[i](x)
+        else: out += models[i](x)
 
-    out /= n_folds
-    out = F.softmax(input=out, dim=1)
-    out_labels = out.argmax(1)
-    out_probas = out.detach().cpu().numpy()
+        out /= n_folds
+        out = F.softmax(input=out, dim=1)
+        out_labels = out.argmax(1)
+        out_probas = out.detach().cpu().numpy()
 
-    
-    predictions_labels += out_labels.tolist()
-    predictions_proba += out_probas.tolist()
+        
+        predictions_labels += out_labels.tolist()
+        predictions_proba += out_probas.tolist()
 
-  return predictions_labels ,predictions_proba
+    return predictions_labels ,predictions_proba
 
 
 
