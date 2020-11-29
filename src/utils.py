@@ -112,7 +112,7 @@ def create_train_dataframe(csv_path, data_path):
         df.to_csv(os.path.join(csv_path, 'final_train.csv'), index=False)
 
         try:
-            samplde_df =  pd.read_csv(os.path.join(csv_path, 'SampleSubmission.csv'))
+            sample_df =  pd.read_csv(os.path.join(csv_path, 'SampleSubmission.csv'))
             sample_df['fn'] = data_path +'/'+ sample_df['fn']
             sample_df.to_csv(os.path.join(csv_path, 'final_test.csv'), index=False)
         except:

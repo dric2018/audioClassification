@@ -37,10 +37,10 @@ class AudioDataset(Dataset):
         sample = {'image' : torch.tensor(img, dtype=torch.float)}
 
         if self.task == 'train':
-            label = self.class_dict[self.df.iloc[index].label]
+            label = self.df.iloc[index].label
             if self.one_hot:
                 sample.update({
-                    'label' : torch.tensor(to_categorical(self.class_dict[label], self.num_classes), dtype=torch.float)
+                    'label' : torch.tensor(to_categorical(label, self.num_classes), dtype=torch.float)
                 })            
             else:
                 sample.update({
