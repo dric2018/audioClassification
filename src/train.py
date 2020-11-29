@@ -32,6 +32,7 @@ parser.add_argument('--img_size', type=int, default=224,  help='input image size
 parser.add_argument('--seed_value', type=int, default=2020,  help='Seed value for reproducibility')
 parser.add_argument('--specs_images_path', type=str, help='Direcetory containing log spectrograms images')
 parser.add_argument('--save_models_to', type=str, help='Directory to save trained models to')
+parser.add_argument('--arch', type=str, default='resnet18', help='Model architecture to load for inference')
 
 
 
@@ -93,15 +94,15 @@ if __name__=='__main__':
   data_transforms = {
       'train': al.Compose([
               al.Resize(args.img_size, args.img_size),
-              al.Cutout(p=.6, max_h_size=15, max_w_size=10, num_holes=4),
-              al.Rotate(limit=35, p=.04),
-              al.Normalize((0.1307,), (0.3081,))
+              al.Cutout(p=.06, max_h_size=15, max_w_size=10, num_holes=4),
+              #al.Rotate(limit=35, p=.04),
+              #al.Normalize((0.1307,), (0.3081,))
       ]),
 
       'test': al.Compose([
               al.Resize(args.img_size, args.img_size),
-              al.Cutout(p=.6, max_h_size=15, max_w_size=10, num_holes=4),
-              al.Normalize((0.1307,), (0.3081,))
+              #al.Cutout(p=.6, max_h_size=15, max_w_size=10, num_holes=4),
+              #al.Normalize((0.1307,), (0.3081,))
       ])
   }
 
@@ -119,9 +120,13 @@ if __name__=='__main__':
     print('*'*18)
     print(f'Training on fold {fold}')
     print('*'*18)
-    metrics = run_fold(fold=fold, train_df=train, args=args ,size=(224, 224), arch='resnet34', pretrained=True,   path=args.save_models_to, data_transforms=data_transforms)
+    metrics = run_fold(fold=fold, train_df=train, args=args ,size=(224, 224), arch=args.arch, pretrained=False,   path=args.save_models_to, data_transforms=data_transforms)
+    #print(metrics)
+    val_acc = metrics['val_acc']
+    val_loss = metrics['val_logLoss']
+    train_acc =metrics['train_acc']
+    train_loss = metrics['train_logLoss_epoch']
     
-    _, _, train_acc, train_loss, val_acc, val_loss = metrics.values()
     print('')
     print('*'*75)
     print(f'\t\t Results for Fold {fold}')
@@ -139,4 +144,4 @@ if __name__=='__main__':
     else:
         avg_log_loss += metrics['val_logLoss']
 
-  print(f'[INFO] raining done ! Avg LogLoss : {avg_log_loss / n_folds}')
+  print(f'[INFO] Training done ! Avg LogLoss : {avg_log_loss / n_folds}')

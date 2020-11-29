@@ -44,9 +44,9 @@ parser.add_argument('--seed_value', type=int, default=2020,  help='Seed value fo
 parser.add_argument('--specs_images_path', type=str, help='Direcetory containing log spectrograms images')
 parser.add_argument('--save_resulting_file_to', type=str, help='Directory to save predictions file')
 parser.add_argument('--arch', type=str, help='Model architecture to load for inference')
-parser.add_argument('--num_epochs', type=int, default=40,  help='Number of epochs for training')
+parser.add_argument('--num_epochs', type=int, default=50,  help='Number of epochs for training')
 parser.add_argument('--models_path', type=str, help='Direcetory containing models checkpoints')
-parser.add_argument('--lr', type=float, default=0.013182567385564073,  help='Learning rate for model training')
+parser.add_argument('--lr', type=float, default=0.0023182567385564073,  help='Learning rate for model training')
 
 
 
@@ -77,7 +77,7 @@ def predict(test_df, images_path, batch_size=16, n_folds=3, transforms=None, n_t
 
     out = None
 
-    for data in tqdm(test_dl):
+    for data in tqdm(test_dl, 'Making predictions'):
         x = data['image'].to(device)
 
         for i in range(n_folds):
@@ -99,7 +99,7 @@ def predict(test_df, images_path, batch_size=16, n_folds=3, transforms=None, n_t
 
 def make_submission_file(sub:pd.DataFrame,predictions_proba=None, submissions_folder=None, params=None):
     submission = pd.DataFrame()
-    words = sub.columns[2:]
+    words = sub.columns[1:]
     submission['fn'] = sub['fn']
     for i, label in enumerate(words):
         submission[label] = 0.

@@ -1,5 +1,5 @@
-arch_name: resnet34
+arch_name: resnet18
 img_size: 224
 lr: 0.0023182567385564073
 out_size: 193
-pretrained: true
+pretrained: false

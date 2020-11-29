@@ -45,8 +45,11 @@ class AudioClassifier(pl.LightningModule):
             ) 
             torch.nn.init.xavier_normal_(self.arch.fc[1].weight)
 
-        else:
+        elif 'resnet' in self.hparams.arch_name:
             self.arch = getattr(models, arch_name)(pretrained)
+            for param in self.arch.parameters():
+                param.require_grad = False
+
 
             head = torch.nn.Conv2d(1, 64, kernel_size=(7,7), stride=(2,2), padding=(3,3))
             head.weight = torch.nn.Parameter(self.arch.conv1.weight.sum(dim=1, keepdim=True))
@@ -60,16 +63,50 @@ class AudioClassifier(pl.LightningModule):
             ) 
             torch.nn.init.xavier_normal_(self.arch.fc[1].weight)
 
+        else:
+            self.arch = nn.Sequential(
+                nn.Conv2d(1, 8, (5, 5)),
+                nn.Conv2d(8, 16, (5, 5)),
+                nn.ReLU(),
+                nn.BatchNorm2d(16),
+                nn.MaxPool2d((2, 2)),
 
+                nn.Conv2d(16, 64, (5, 5)),
+                nn.ReLU(),
+                nn.BatchNorm2d(64),
+                nn.MaxPool2d((2, 2)),
+
+
+                nn.Conv2d(64, 128, (3, 3)),
+                nn.ReLU(),
+                nn.BatchNorm2d(128),
+                nn.MaxPool2d((3, 3)),
+
+                nn.Conv2d(128, 256, (3, 3)),
+                nn.Conv2d(256, 512, (3, 3)),
+                nn.ReLU(),
+                nn.BatchNorm2d(512),
+                nn.MaxPool2d((2, 2)),
+
+            )
+            self.classifier = nn.Sequential(
+                nn.Linear(6 * 6 * 512, 256),
+                nn.Linear(256, self.hparams.out_size)
+            )
 
     def forward(self, x):
         x = self.arch(x.view(-1, 1, self.hparams.img_size, self.hparams.img_size))
+        try:
+            x = x.view(-1, 6 * 6 * 512)
+            x = self.classifier(x)
+        except :
+            pass
 
         return x
 
 
     def configure_optimizers(self):
-        opt = torch.optim.SGD(self.parameters(), lr=self.hparams.lr)
+        opt = torch.optim.Adam(self.parameters(), lr=self.hparams.lr)
         return opt
 
 
@@ -85,7 +122,7 @@ class AudioClassifier(pl.LightningModule):
         self.log('train_acc', acc, on_epoch=True, on_step=False, prog_bar=True)
         self.log('train_logLoss', logLoss, on_epoch=True, on_step=True, prog_bar=False)
 
-        return {'loss':logLoss, 'train_logloss':logLoss, 'train_acc':acc}
+        return {'loss':logLoss, 'train_logLoss':logLoss, 'train_acc':acc}
 
 
     def validation_step(self, batch, batch_idx):
@@ -139,9 +176,7 @@ if __name__ == '__main__':
     data_transforms = {
         'train': al.Compose([
                 al.Resize(IMG_SIZE, IMG_SIZE),
-                al.Cutout(p=.6, max_h_size=15, max_w_size=10, num_holes=4),
-                al.Rotate(limit=35, p=.04),
-                al.Normalize((0.1307,), (0.3081,))
+ 
         ]),
 
         'test': al.Compose([
@@ -154,17 +189,18 @@ if __name__ == '__main__':
     # data loaders
     train_df = pd.read_csv('../data/Giz-agri-keywords-data/final_train.csv')
     ds = AudioDataset(images_path='../data/Giz-agri-keywords-data/datasets/images', df=train_df, transforms=data_transforms['train'])
-    dl = DataLoader(dataset=ds, shuffle=True, batch_size=64, num_workers=os.cpu_count())
+    dl = DataLoader(dataset=ds, shuffle=True, batch_size=32, num_workers=os.cpu_count())
 
     # instanciate model
-    model = AudioClassifier(arch_name='resnet18', pretrained=True).to('cuda')
+    model = AudioClassifier(arch_name='scratch', pretrained=True).to('cuda')
     #batch = next(iter(dl))
     #logits = model(batch['image'].to('cuda'))
+    #print(logits.shape)
     #print(logits.shape, batch['label'].shape)
     #loss = model.get_loss(logits, batch['label'].to('cuda'))
     #acc = model.get_acc(logits, batch['label'].to('cuda'))
 
-    trainer = pl.Trainer(gpus=1, max_epochs=1)
+    trainer = pl.Trainer(gpus=1, max_epochs=5)
     trainer.fit(model, dl)
     trainer.test(model, dl)
     #trainer.tune(model, train_dataloader=dl)
