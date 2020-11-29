@@ -24,6 +24,7 @@ parser.add_argument('--create_train_df', default=True, type=bool, help='Create a
 parser.add_argument('--csv_path', type=str, help='Csv files path')
 parser.add_argument('--specs_path', type=str, help='Spectrograms files path')
 parser.add_argument('--create_spectrograms', default=True, type=bool, help='Create log spectrogram or not')
+parser.add_argument('--sample_csv_path', type=str, help='sample submission csv file')
 
 
 def extract_files(data_path:str, destination_path:str):
@@ -111,15 +112,6 @@ def create_train_dataframe(csv_path, data_path):
         df['label'] = df.swifter.progress_bar(enable=True, desc='Converting labels to ints').apply(lambda row : label_to_int(label=row.label, class_dict={l:idx for idx, l in enumerate(df.label.unique().tolist())}) , axis=1)# use all available cpu cores
         df.to_csv(os.path.join(csv_path, 'final_train.csv'), index=False)
 
-        try:
-            sample_df =  pd.read_csv(os.path.join(csv_path, 'SampleSubmission.csv'))
-            sample_df['fn'] = data_path +'/'+ sample_df['fn']
-            sample_df.to_csv(os.path.join(csv_path, 'final_test.csv'), index=False)
-        except:
-            pass
-    
-        return df
-
 
 
 def log_specgram(audio, sample_rate, window_size=20, step_size=10, eps=1e-10):
@@ -155,7 +147,7 @@ def wav2img(wav_path, targetdir='', figsize=(4,4)):
     plt.imsave('%s.png' % output_file, spectrogram)
     plt.close()
 
-    return output_file
+    return output_file+'.png'
 
 
 
@@ -184,15 +176,27 @@ if __name__ == '__main__':
 
     if args.create_spectrograms:
         try:
+            # train spectrograms
             img_dir = args.specs_path+'/images'
             df['spec_path'] = img_dir
             os.makedirs(img_dir, exist_ok=True)
             for row in tqdm(df.iterrows(), total=len(df), desc='Creating specs'):
                 output_file = wav2img(wav_path=row[1].fn, targetdir=img_dir)
-                df['spec_path'] = output_file
+                df.at[row[0], 'spec_path'] = output_file
 
             # save dataframe with specs paths
             df.to_csv(os.path.join(args.csv_path, 'final_train.csv'), index=False)
+            
+            # test spectrograms
+            sample = pd.read_csv(args.sample_csv_path)
+            sample['fn'] = args.data_path +'/'+ sample['fn']
+            sample['spec_path'] = img_dir
+
+            for row in tqdm(sample.iterrows(), total=len(sample), desc='Creating specs'):
+                output_file = wav2img(wav_path=row[1].fn, targetdir=img_dir)
+                sample.at[row[0], 'spec_path'] = output_file
+
+            sample.to_csv(os.path.join(args.csv_path, 'final_test.csv'), index=False)
             
         except:
             pass

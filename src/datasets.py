@@ -16,7 +16,10 @@ class AudioDataset(Dataset):
 
         self.task = task 
         self.df = df
-        self.class_dict = {label:idx for idx,label in enumerate(self.df.label.unique().tolist())}
+        try:
+            self.class_dict = {label:idx for idx,label in enumerate(self.df.label.unique().tolist())}
+        except:
+            pass
         self.transforms = transforms
         self.one_hot = one_hot
         self.images_path = images_path
@@ -28,7 +31,7 @@ class AudioDataset(Dataset):
         wav_path = self.df.iloc[index].fn
         file_ = wav_path.split('/')[-1].split('.wav')[0]
         file_path = self.images_path +'/'+ file_ +'.png'
-
+        
         # load spectrogram
         img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)        
         if self.transforms is not None:
@@ -77,12 +80,14 @@ if __name__ == '__main__':
     }
 
     # data loaders
-    train_df = pd.read_csv('../data/Giz-agri-keywords-data/final_train.csv')
-    ds = AudioDataset(images_path='../data/Giz-agri-keywords-data/datasets/images', df=train_df, transforms=data_transforms['train'])
-    dl = DataLoader(dataset=ds, shuffle=True, batch_size=32, num_workers=os.cpu_count())
+    #train_df = pd.read_csv('../data/Giz-agri-keywords-data/final_train.csv')
+    #ds = AudioDataset(images_path='../data/Giz-agri-keywords-data/datasets/images', df=train_df, transforms=data_transforms['train'])
+    #dl = DataLoader(dataset=ds, shuffle=True, batch_size=32, num_workers=os.cpu_count())
 
-    for data in dl:
+    test_df = pd.read_csv('../data/Giz-agri-keywords-data/final_test.csv')
+    test_ds = AudioDataset(images_path='../data/Giz-agri-keywords-data/datasets/images', task='test', df=test_df, transforms=data_transforms['test'])
+    test_dl = DataLoader(dataset=test_ds, shuffle=False, batch_size=16)
+    for data in test_dl:
         print(data['image'].shape)
-        print(data['label'])
         break
     

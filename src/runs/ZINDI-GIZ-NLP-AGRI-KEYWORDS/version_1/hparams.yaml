@@ -1,5 +1,0 @@
-arch_name: resnet34
-img_size: 224
-lr: 0.013182567385564073
-out_size: 193
-pretrained: true
