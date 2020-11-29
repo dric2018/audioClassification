@@ -1,2 +1,5 @@
 data/
 .vscode/
+src/models
+src/runs
+src/audio-data-conversion-to-images-eda.ipynb
