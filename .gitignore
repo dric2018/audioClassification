@@ -1,8 +1,7 @@
-data/*
+data/
 .vscode/
-models/*
-src/runs/
+models/
 runs/
 audio-data-conversion-to-images-eda.ipynb
 images/
-files/*
+files/
